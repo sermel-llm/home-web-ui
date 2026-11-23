@@ -30,12 +30,11 @@
     background: #2b2f2d;
     text-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
-  /* Ненавязчивый фон: русский пейзаж (холмы, лес, берёзы), нарисован SVG */
+  /* Фон: однотонный тёмный, поверх — фотографии */
   .bg {
     position: fixed; inset: 0; z-index: -1;
-    background: linear-gradient(#eef3f1 0%, #dce7e2 55%, #c9d8cf 100%);
+    background: #2b2f2d; /* однотонный, пока грузятся фото */
   }
-  .bg svg { position: absolute; bottom: 0; width: 100%; height: 70%; opacity: 0.55; }
   .bg::after { content: ""; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.3)); }
 
@@ -116,6 +115,18 @@
     border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; margin-top: 8px;
   }
   .loading { color: var(--muted); }
+  .source { color: var(--muted); font-size: 0.78rem; text-align: center; margin: -6px 0 16px; }
+  /* Состояние загрузки: мерцающая заглушка вместо значения */
+  .is-loading { position: relative; color: transparent !important; text-shadow: none; pointer-events: none; }
+  .is-loading::after {
+    content: ""; position: absolute; left: 0; top: 15%; height: 70%; width: min(140px, 80%);
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.08) 25%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0.08) 75%);
+    background-size: 200% 100%; animation: shimmer 1.2s linear infinite;
+  }
+  .sub.is-loading::after { width: min(180px, 90%); }
+  .clock.is-loading::after { left: 50%; transform: translateX(-50%); width: min(360px, 70%); }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
   /* Компьютер: всё помещается в один экран, без прокрутки */
   @media (min-width: 801px) {
     html, body { height: 100%; overflow: hidden; }
@@ -127,7 +138,8 @@
     .time-card { padding: 2.5vh 20px; margin-bottom: 1.6vh; }
     .clock { font-size: clamp(3rem, 13vh, 8rem); }
     .date { margin-top: 0.8vh; }
-    .row { margin-bottom: 1.6vh; }
+    .row { margin-bottom: 0.8vh; }
+    .source { margin: 0 0 1.2vh; }
     .row .card { padding: 1.6vh 20px; }
     .value { font-size: clamp(1.4rem, 4.2vh, 2.2rem); }
     .news { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -142,20 +154,6 @@
 </head>
 <body>
 <div class="bg" aria-hidden="true">
-  <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMax slice">
-    <path d="M0 260 Q200 180 420 240 T850 210 T1200 230 V500 H0Z" fill="#a9bfb3"/>
-    <g fill="#7f9c8c">
-      <path d="M0 320 L40 250 L80 320Z M60 320 L100 240 L140 320Z M120 320 L165 230 L210 320Z M190 320 L230 255 L270 320Z M940 320 L985 235 L1030 320Z M1010 320 L1050 250 L1090 320Z M1070 320 L1115 225 L1160 320Z M1140 320 L1180 245 L1220 320Z"/>
-    </g>
-    <path d="M0 330 Q300 290 600 330 T1200 320 V500 H0Z" fill="#9bb5a4"/>
-    <g stroke="#f4f4ef" stroke-width="7">
-      <line x1="430" y1="420" x2="432" y2="250"/><line x1="470" y1="430" x2="468" y2="270"/><line x1="720" y1="425" x2="723" y2="260"/>
-    </g>
-    <g fill="#b5c9a8" opacity="0.9">
-      <ellipse cx="431" cy="265" rx="38" ry="48"/><ellipse cx="469" cy="285" rx="32" ry="42"/><ellipse cx="722" cy="275" rx="40" ry="50"/>
-    </g>
-    <path d="M0 410 Q400 370 800 405 T1200 400 V500 H0Z" fill="#8aa893"/>
-  </svg>
   <div class="slide" id="slide-a"></div>
   <div class="slide" id="slide-b"></div>
 </div>
@@ -172,7 +170,7 @@
 
   <section class="card time-card">
     <div class="label">Москва</div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="clock is-loading" id="clock">00:00:00</div>
     <div class="date" id="date"></div>
     <div id="time-error"></div>
   </section>
@@ -191,12 +189,13 @@
       <div id="eur-error"></div>
     </section>
     <section class="card">
-      <div class="label">Погода</div>
+      <div class="label">Погода (Open-Meteo)</div>
       <div class="value" id="temp">—</div>
       <div class="sub" id="precip"></div>
       <div id="weather-error"></div>
     </section>
   </div>
+  <div class="source">Данные получены из внешних API</div>
 
   <section class="card news">
     <h2>Последние новости</h2>
@@ -226,6 +225,10 @@ const showError = (id, msg) => { $(id).innerHTML = msg ? `<div class="error">${e
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = (n, d = 2) => n.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
 
+function setLoading(ids, on) {
+  for (const id of ids) { $(id).classList.toggle('is-loading', on); if (on) $(id).textContent = $(id).textContent || '\u00a0'; }
+}
+
 async function fetchWithTimeout(url, ms = 10000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -246,9 +249,9 @@ function renderClock() {
   const now = new Date(Date.now() + timeOffset);
   $('clock').textContent = now.toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const hour = +now.toLocaleString('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' });
-  // 5–11 утро, 12–16 день, 17–4 вечер
-  const part = hour >= 5 && hour < 12 ? 'утра' : hour >= 12 && hour < 17 ? 'дня' : 'вечера';
-  const greet = `Хорошего ${part} в Москве`;
+  // 0–4 ночь, 5–11 утро, 12–16 день, 17–23 вечер
+  const greet = hour < 5 ? 'Доброй ночи в Москве'
+    : `Хорошего ${hour < 12 ? 'утра' : hour < 17 ? 'дня' : 'вечера'} в Москве`;
   if ($('greeting').textContent !== greet) { $('greeting').textContent = greet; document.title = greet; }
   $('date').textContent = now.toLocaleDateString('ru-RU', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
@@ -267,6 +270,7 @@ async function loadTime() {
   }
   if (!clockTimer) clockTimer = setInterval(renderClock, 1000);
   renderClock();
+  $('clock').classList.remove('is-loading');
 }
 
 /* ---------- Курсы ЦБ ---------- */
@@ -281,6 +285,8 @@ function renderRate(code, v) {
 }
 
 async function loadRates() {
+  const ids = ['usd', 'usd-sub', 'eur', 'eur-sub'];
+  setLoading(ids, true);
   try {
     const data = await (await fetchWithTimeout(CBR_URL)).json();
     const date = new Date(data.Date).toLocaleDateString('ru-RU');
@@ -294,7 +300,7 @@ async function loadRates() {
       $(id).textContent = '—'; $(id + '-sub').textContent = '';
       showError(id + '-error', `Курсы ЦБ недоступны: ${e.message}`);
     }
-  }
+  } finally { setLoading(ids, false); }
 }
 
 /* ---------- Погода ---------- */
@@ -305,6 +311,8 @@ const WMO = {0:'Ясно',1:'Преимущественно ясно',2:'Пер�
   85:'Снегопад',86:'Сильный снегопад',95:'Гроза',96:'Гроза с градом',99:'Гроза с градом'};
 
 async function loadWeather() {
+  const ids = ['temp', 'precip'];
+  setLoading(ids, true);
   try {
     const c = (await (await fetchWithTimeout(WEATHER_URL)).json()).current;
     if (!c || typeof c.temperature_2m !== 'number') throw new Error('неожиданный формат ответа');
@@ -315,7 +323,7 @@ async function loadWeather() {
   } catch (e) {
     $('temp').textContent = '—'; $('precip').textContent = '';
     showError('weather-error', `Погода (Open-Meteo) недоступна: ${e.message}`);
-  }
+  } finally { setLoading(ids, false); }
 }
 
 /* ---------- Новости ---------- */
