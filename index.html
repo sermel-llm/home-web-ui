@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Курс валют и погода в Москве</title>
+<style>
+  :root {
+    --card: rgba(255, 255, 255, 0.82);
+    --text: #1f2a2e;
+    --muted: #5b676b;
+    --accent: #2f6b5a;
+    --error-bg: #fdecea;
+    --error: #a3261b;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--text);
+    background: #dfe8e4;
+  }
+  /* Ненавязчивый фон: русский пейзаж (холмы, лес, берёзы), нарисован SVG */
+  .bg {
+    position: fixed; inset: 0; z-index: -1;
+    background: linear-gradient(#eef3f1 0%, #dce7e2 55%, #c9d8cf 100%);
+  }
+  .bg svg { position: absolute; bottom: 0; width: 100%; height: 70%; opacity: 0.55; }
+  .bg::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.25); }
+
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 1.3rem; margin: 0; font-weight: 600; }
+  .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .updated { color: var(--muted); font-size: 0.9rem; }
+  button {
+    font: inherit; padding: 8px 18px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff; cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: progress; }
+
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(6px);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 18px 20px;
+  }
+  .label { color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
+  .time-card { text-align: center; padding: 32px 20px; margin-bottom: 16px; }
+  .clock { font-size: clamp(3.5rem, 14vw, 7rem); font-weight: 300; letter-spacing: 2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .date { color: var(--muted); margin-top: 10px; font-size: 1.1rem; }
+
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  .value { font-size: 2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+  .up { color: #2e7d32; } .down { color: #c62828; }
+
+  .news h2 { margin: 0 0 12px; font-size: 1.1rem; }
+  .news-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 800px) { .news-cols { grid-template-columns: 1fr; } }
+  .news h3 { font-size: 0.95rem; color: var(--accent); margin: 0 0 8px; }
+  .news ul { list-style: none; padding: 0; margin: 0; }
+  .news li { padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.07); font-size: 0.92rem; }
+  .news li:last-child { border-bottom: 0; }
+  .news a { color: var(--text); text-decoration: none; }
+  .news a:hover { text-decoration: underline; }
+  .news time { display: block; color: var(--muted); font-size: 0.8rem; }
+
+  .error {
+    background: var(--error-bg); color: var(--error);
+    border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; margin-top: 8px;
+  }
+  .loading { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMax slice">
+    <path d="M0 260 Q200 180 420 240 T850 210 T1200 230 V500 H0Z" fill="#a9bfb3"/>
+    <g fill="#7f9c8c">
+      <path d="M0 320 L40 250 L80 320Z M60 320 L100 240 L140 320Z M120 320 L165 230 L210 320Z M190 320 L230 255 L270 320Z M940 320 L985 235 L1030 320Z M1010 320 L1050 250 L1090 320Z M1070 320 L1115 225 L1160 320Z M1140 320 L1180 245 L1220 320Z"/>
+    </g>
+    <path d="M0 330 Q300 290 600 330 T1200 320 V500 H0Z" fill="#9bb5a4"/>
+    <g stroke="#f4f4ef" stroke-width="7">
+      <line x1="430" y1="420" x2="432" y2="250"/><line x1="470" y1="430" x2="468" y2="270"/><line x1="720" y1="425" x2="723" y2="260"/>
+    </g>
+    <g fill="#b5c9a8" opacity="0.9">
+      <ellipse cx="431" cy="265" rx="38" ry="48"/><ellipse cx="469" cy="285" rx="32" ry="42"/><ellipse cx="722" cy="275" rx="40" ry="50"/>
+    </g>
+    <path d="M0 410 Q400 370 800 405 T1200 400 V500 H0Z" fill="#8aa893"/>
+  </svg>
+</div>
+
+<main>
+  <header>
+    <h1>Курс валют и погода в Москве</h1>
+    <div class="controls">
+      <span class="updated" id="updated">Обновление…</span>
+      <button id="refresh">Обновить</button>
+    </div>
+  </header>
+
+  <section class="card time-card">
+    <div class="label">Москва</div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="date" id="date"></div>
+    <div id="time-error"></div>
+  </section>
+
+  <div class="row">
+    <section class="card">
+      <div class="label">Курс USD (ЦБ РФ)</div>
+      <div class="value" id="usd">—</div>
+      <div class="sub" id="usd-sub"></div>
+      <div id="usd-error"></div>
+    </section>
+    <section class="card">
+      <div class="label">Курс EUR (ЦБ РФ)</div>
+      <div class="value" id="eur">—</div>
+      <div class="sub" id="eur-sub"></div>
+      <div id="eur-error"></div>
+    </section>
+    <section class="card">
+      <div class="label">Погода</div>
+      <div class="value" id="temp">—</div>
+      <div class="sub" id="precip"></div>
+      <div id="weather-error"></div>
+    </section>
+  </div>
+
+  <section class="card news">
+    <h2>Последние новости</h2>
+    <div class="news-cols" id="news"></div>
+  </section>
+</main>
+
+<script>
+const TZ = 'Europe/Moscow';
+const TIME_URL = 'https://gateway.timeapi.world/timezone/Europe/Moscow';
+const CBR_URL = 'https://www.cbr-xml-daily.ru/daily_json.js';
+const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=55.7558&longitude=37.6173'
+  + '&current=temperature_2m,apparent_temperature,precipitation,weather_code&timezone=Europe%2FMoscow';
+const FEEDS = [
+  { title: 'Экономика', url: 'https://www.vedomosti.ru/rss/rubric/economics/global.xml' },
+  { title: 'Бизнес', url: 'https://www.vedomosti.ru/rss/rubric/business/industry.xml' },
+  { title: 'Технологии', url: 'https://www.vedomosti.ru/rss/rubric/technology/hi_tech.xml' },
+];
+// RSS Ведомостей не отдаёт CORS-заголовки, поэтому читаем через публичные прокси (по очереди)
+const PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?url=' + encodeURIComponent(u),
+];
+
+const $ = id => document.getElementById(id);
+const showError = (id, msg) => { $(id).innerHTML = msg ? `<div class="error">${escapeHtml(msg)}</div>` : ''; };
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = (n, d = 2) => n.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+async function fetchWithTimeout(url, ms = 10000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r;
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'превышено время ожидания' : (e.message || 'сеть недоступна'));
+  } finally { clearTimeout(t); }
+}
+
+/* ---------- Время ---------- */
+let timeOffset = 0;      // разница между временем API и часами браузера, мс
+let clockTimer = null;
+
+function renderClock() {
+  const now = new Date(Date.now() + timeOffset);
+  $('clock').textContent = now.toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('date').textContent = now.toLocaleDateString('ru-RU', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function loadTime() {
+  try {
+    const data = await (await fetchWithTimeout(TIME_URL)).json();
+    const iso = data.utc_datetime || data.datetime;
+    const ms = iso ? Date.parse(iso) : (data.unixtime ? data.unixtime * 1000 : NaN);
+    if (isNaN(ms)) throw new Error('неожиданный формат ответа');
+    timeOffset = ms - Date.now();
+    showError('time-error', '');
+  } catch (e) {
+    timeOffset = 0;
+    showError('time-error', `Не удалось получить время с timeapi.world (${e.message}). Показано время по часам вашего устройства для Москвы.`);
+  }
+  if (!clockTimer) clockTimer = setInterval(renderClock, 1000);
+  renderClock();
+}
+
+/* ---------- Курсы ЦБ ---------- */
+function renderRate(code, v) {
+  const id = code.toLowerCase();
+  const value = v.Value / v.Nominal, prev = v.Previous / v.Nominal, diff = value - prev;
+  $(id).textContent = fmt(value) + ' ₽';
+  const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : '';
+  const sign = diff > 0 ? '▲ +' : diff < 0 ? '▼ ' : '';
+  $(id + '-sub').innerHTML = `<span class="${cls}">${sign}${fmt(diff)}</span> к предыдущему дню`;
+  showError(id + '-error', '');
+}
+
+async function loadRates() {
+  try {
+    const data = await (await fetchWithTimeout(CBR_URL)).json();
+    const date = new Date(data.Date).toLocaleDateString('ru-RU');
+    for (const code of ['USD', 'EUR']) {
+      if (!data.Valute?.[code]) throw new Error('нет данных по ' + code);
+      renderRate(code, data.Valute[code]);
+      $(code.toLowerCase() + '-sub').innerHTML += `<br>на ${date}`;
+    }
+  } catch (e) {
+    for (const id of ['usd', 'eur']) {
+      $(id).textContent = '—'; $(id + '-sub').textContent = '';
+      showError(id + '-error', `Курсы ЦБ недоступны: ${e.message}`);
+    }
+  }
+}
+
+/* ---------- Погода ---------- */
+const WMO = {0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Пасмурно',45:'Туман',48:'Изморозь',
+  51:'Слабая морось',53:'Морось',55:'Сильная морось',56:'Ледяная морось',57:'Ледяная морось',
+  61:'Небольшой дождь',63:'Дождь',65:'Сильный дождь',66:'Ледяной дождь',67:'Ледяной дождь',
+  71:'Небольшой снег',73:'Снег',75:'Сильный снег',77:'Снежная крупа',80:'Ливень',81:'Ливень',82:'Сильный ливень',
+  85:'Снегопад',86:'Сильный снегопад',95:'Гроза',96:'Гроза с градом',99:'Гроза с градом'};
+
+async function loadWeather() {
+  try {
+    const c = (await (await fetchWithTimeout(WEATHER_URL)).json()).current;
+    if (!c || typeof c.temperature_2m !== 'number') throw new Error('неожиданный формат ответа');
+    const t = Math.round(c.temperature_2m);
+    $('temp').textContent = (t > 0 ? '+' : '') + t + ' °C';
+    $('precip').innerHTML = `${escapeHtml(WMO[c.weather_code] ?? '')}<br>Осадки: ${fmt(c.precipitation, 1)} мм · ощущается как ${Math.round(c.apparent_temperature)} °C`;
+    showError('weather-error', '');
+  } catch (e) {
+    $('temp').textContent = '—'; $('precip').textContent = '';
+    showError('weather-error', `Погода (Open-Meteo) недоступна: ${e.message}`);
+  }
+}
+
+/* ---------- Новости ---------- */
+async function fetchFeed(url) {
+  let lastErr;
+  // 1) rss2json — отдаёт ленту в JSON с CORS
+  try {
+    const j = await (await fetchWithTimeout('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url), 12000)).json();
+    if (j.status !== 'ok' || !j.items?.length) throw new Error(j.message || 'лента пуста');
+    return j.items.slice(0, 5).map(it => ({ title: it.title, link: it.link, date: it.pubDate && it.pubDate.replace(' ', 'T') + 'Z' }));
+  } catch (e) { lastErr = e; }
+  // 2) запасные прокси с сырым XML
+  for (const proxy of PROXIES) {
+    try {
+      const text = await (await fetchWithTimeout(proxy(url), 12000)).text();
+      const xml = new DOMParser().parseFromString(text, 'text/xml');
+      const items = [...xml.querySelectorAll('item')];
+      if (!items.length) throw new Error('лента пуста или повреждена');
+      return items.slice(0, 5).map(it => ({
+        title: it.querySelector('title')?.textContent.trim() ?? '',
+        link: it.querySelector('link')?.textContent.trim() ?? '#',
+        date: it.querySelector('pubDate')?.textContent,
+      }));
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
+async function loadNews() {
+  const box = $('news');
+  box.innerHTML = FEEDS.map((f, i) => `<div><h3>${f.title}</h3><div id="feed-${i}" class="loading">Загрузка…</div></div>`).join('');
+  await Promise.all(FEEDS.map(async (f, i) => {
+    const el = $('feed-' + i);
+    try {
+      const items = await fetchFeed(f.url);
+      el.className = '';
+      el.innerHTML = '<ul>' + items.map(n => {
+        const d = n.date ? new Date(n.date) : null;
+        const when = d && !isNaN(d) ? d.toLocaleString('ru-RU', { timeZone: TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+        const safeLink = /^https?:\/\//.test(n.link) ? n.link : '#';
+        return `<li><a href="${escapeHtml(safeLink)}" target="_blank" rel="noopener">${escapeHtml(n.title)}</a>${when ? `<time>${when}</time>` : ''}</li>`;
+      }).join('') + '</ul>';
+    } catch (e) {
+      el.className = '';
+      el.innerHTML = `<div class="error">Не удалось загрузить ленту «${f.title}»: ${escapeHtml(e.message)}</div>`;
+    }
+  }));
+}
+
+/* ---------- Обновление ---------- */
+async function refreshAll() {
+  const btn = $('refresh');
+  btn.disabled = true;
+  $('updated').textContent = 'Обновление…';
+  await Promise.allSettled([loadTime(), loadRates(), loadWeather(), loadNews()]);
+  const now = new Date(Date.now() + timeOffset);
+  $('updated').textContent = 'Обновлено: ' + now.toLocaleTimeString('ru-RU', { timeZone: TZ });
+  btn.disabled = false;
+}
+
+$('refresh').addEventListener('click', refreshAll);
+refreshAll();
+</script>
+</body>
+</html>
