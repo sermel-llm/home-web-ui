@@ -140,7 +140,7 @@
 
 <script>
 const TZ = 'Europe/Moscow';
-const TIME_URL = 'https://gateway.timeapi.world/timezone/Europe/Moscow';
+const TIME_URL = 'https://time.now/developer/api/timezone/Europe/Moscow';
 const CBR_URL = 'https://www.cbr-xml-daily.ru/daily_json.js';
 const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=55.7558&longitude=37.6173'
   + '&current=temperature_2m,apparent_temperature,precipitation,weather_code&timezone=Europe%2FMoscow';
@@ -192,7 +192,7 @@ async function loadTime() {
     showError('time-error', '');
   } catch (e) {
     timeOffset = 0;
-    showError('time-error', `Не удалось получить время с timeapi.world (${e.message}). Показано время по часам вашего устройства для Москвы.`);
+    showError('time-error', `Не удалось получить время с time.now (${e.message}). Показано время по часам вашего устройства для Москвы.`);
   }
   if (!clockTimer) clockTimer = setInterval(renderClock, 1000);
   renderClock();
