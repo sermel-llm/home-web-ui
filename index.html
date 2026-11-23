@@ -3,24 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Курс валют и погода в Москве</title>
+<title>Хорошего дня в Москве</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --card: rgba(255, 255, 255, 0.82);
-    --text: #1f2a2e;
-    --muted: #5b676b;
-    --accent: #2f6b5a;
-    --error-bg: #fdecea;
-    --error: #a3261b;
-    --radius: 18px;
+    /* Матовое стекло: тёмная полупрозрачная подложка + сильное размытие фона */
+    --glass: rgba(28, 30, 32, 0.42);
+    --glass-strong: rgba(28, 30, 32, 0.55);
+    --glass-inner: rgba(255, 255, 255, 0.07);
+    --glass-border: rgba(255, 255, 255, 0.16);
+    --blur: blur(22px) saturate(140%);
+    --text: #f5f5f3;
+    --muted: rgba(245, 245, 243, 0.68);
+    --accent: #ff8a3d;
+    --error-bg: rgba(255, 90, 70, 0.18);
+    --error: #ffb4a6;
+    --radius: 22px;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
     min-height: 100vh;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
-    background: #dfe8e4;
+    background: #2b2f2d;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25);
   }
   /* Ненавязчивый фон: русский пейзаж (холмы, лес, берёзы), нарисован SVG */
   .bg {
@@ -28,7 +36,8 @@
     background: linear-gradient(#eef3f1 0%, #dce7e2 55%, #c9d8cf 100%);
   }
   .bg svg { position: absolute; bottom: 0; width: 100%; height: 70%; opacity: 0.55; }
-  .bg::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.22); }
+  .bg::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.3)); }
 
   /* Фотофон: два слоя с плавной сменой (1 с) и медленным приближением */
   .slide {
@@ -44,8 +53,10 @@
 
   .caption {
     position: fixed; right: 16px; bottom: 16px; z-index: 1; max-width: min(420px, calc(100% - 32px));
-    background: rgba(20, 28, 26, 0.6); color: #fff; backdrop-filter: blur(4px);
-    padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; line-height: 1.35;
+    background: var(--glass-strong); color: #fff;
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    padding: 10px 16px; border-radius: 14px; font-size: 0.85rem; line-height: 1.35;
     transition: opacity 1s ease-in-out;
   }
   .caption b { font-weight: 600; display: block; }
@@ -58,39 +69,43 @@
 
   main { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
   header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-  h1 { font-size: 1.3rem; margin: 0; font-weight: 600; }
+  h1 { font-size: 1.5rem; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
   .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .updated { color: var(--muted); font-size: 0.9rem; }
   button {
-    font: inherit; padding: 8px 18px; border: 0; border-radius: 10px;
-    background: var(--accent); color: #fff; cursor: pointer;
+    font: inherit; font-weight: 500; padding: 9px 20px; border-radius: 999px;
+    background: rgba(255,255,255,0.12); color: var(--text); cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.28);
+    transition: background .2s;
   }
+  button:hover { background: rgba(255,255,255,0.22); }
   button:disabled { opacity: 0.6; cursor: progress; }
 
   .card {
-    background: var(--card);
-    backdrop-filter: blur(6px);
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
     border-radius: var(--radius);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
     padding: 18px 20px;
   }
-  .label { color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
+  .label { color: var(--muted); font-size: 0.85rem; margin-bottom: 6px; letter-spacing: 0.02em; }
   .time-card { text-align: center; padding: 32px 20px; margin-bottom: 16px; }
-  .clock { font-size: clamp(3.5rem, 14vw, 7rem); font-weight: 300; letter-spacing: 2px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .clock { font-size: clamp(3.5rem, 14vw, 7rem); font-weight: 200; letter-spacing: 2px; line-height: 1; font-variant-numeric: tabular-nums; }
   .date { color: var(--muted); margin-top: 10px; font-size: 1.1rem; }
 
   .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
   @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
   .value { font-size: 2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
   .sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
-  .up { color: #2e7d32; } .down { color: #c62828; }
+  .up { color: #8fe3a6; } .down { color: #ff9c8a; }
 
   .news h2 { margin: 0 0 12px; font-size: 1.1rem; }
   .news-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   @media (max-width: 800px) { .news-cols { grid-template-columns: 1fr; } }
-  .news h3 { font-size: 0.95rem; color: var(--accent); margin: 0 0 8px; }
+  .news h3 { font-size: 0.8rem; color: var(--accent); margin: 0 0 8px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
   .news ul { list-style: none; padding: 0; margin: 0; }
-  .news li { padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.07); font-size: 0.92rem; }
+  .news li { padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.92rem; line-height: 1.35; }
   .news li:last-child { border-bottom: 0; }
   .news a { color: var(--text); text-decoration: none; }
   .news a:hover { text-decoration: underline; }
@@ -148,7 +163,7 @@
 
 <main>
   <header class="card">
-    <h1>Курс валют и погода в Москве</h1>
+    <h1 id="greeting">Хорошего дня в Москве</h1>
     <div class="controls">
       <span class="updated" id="updated">Обновление…</span>
       <button id="refresh">Обновить</button>
@@ -230,6 +245,11 @@ let clockTimer = null;
 function renderClock() {
   const now = new Date(Date.now() + timeOffset);
   $('clock').textContent = now.toLocaleTimeString('ru-RU', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const hour = +now.toLocaleString('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' });
+  // 5–11 утро, 12–16 день, 17–4 вечер
+  const part = hour >= 5 && hour < 12 ? 'утра' : hour >= 12 && hour < 17 ? 'дня' : 'вечера';
+  const greet = `Хорошего ${part} в Москве`;
+  if ($('greeting').textContent !== greet) { $('greeting').textContent = greet; document.title = greet; }
   $('date').textContent = now.toLocaleDateString('ru-RU', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
