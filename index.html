@@ -28,7 +28,32 @@
     background: linear-gradient(#eef3f1 0%, #dce7e2 55%, #c9d8cf 100%);
   }
   .bg svg { position: absolute; bottom: 0; width: 100%; height: 70%; opacity: 0.55; }
-  .bg::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.25); }
+  .bg::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.22); }
+
+  /* Фотофон: два слоя с плавной сменой (1 с) и медленным приближением */
+  .slide {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center;
+    opacity: 0; transition: opacity 1s ease-in-out;
+    will-change: opacity, transform;
+  }
+  .slide.show { opacity: 1; }
+  .slide.zoom { animation: zoom 62s linear forwards; }
+  @keyframes zoom { from { transform: scale(1); } to { transform: scale(1.08); } }
+  @media (prefers-reduced-motion: reduce) { .slide.zoom { animation: none; } }
+
+  .caption {
+    position: fixed; right: 16px; bottom: 16px; z-index: 1; max-width: min(420px, calc(100% - 32px));
+    background: rgba(20, 28, 26, 0.6); color: #fff; backdrop-filter: blur(4px);
+    padding: 8px 14px; border-radius: 10px; font-size: 0.85rem; line-height: 1.35;
+    transition: opacity 1s ease-in-out;
+  }
+  .caption b { font-weight: 600; display: block; }
+  .caption span { opacity: 0.8; }
+  .caption small { display: block; opacity: 0.6; font-size: 0.75rem; margin-top: 2px; }
+  .caption:empty { display: none; }
+  main { padding-bottom: 90px !important; }
+  header.card { padding: 12px 20px; }
 
   main { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
   header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -93,10 +118,13 @@
     </g>
     <path d="M0 410 Q400 370 800 405 T1200 400 V500 H0Z" fill="#8aa893"/>
   </svg>
+  <div class="slide" id="slide-a"></div>
+  <div class="slide" id="slide-b"></div>
 </div>
+<div class="caption" id="caption" aria-live="polite"></div>
 
 <main>
-  <header>
+  <header class="card">
     <h1>Курс валют и погода в Москве</h1>
     <div class="controls">
       <span class="updated" id="updated">Обновление…</span>
@@ -304,6 +332,72 @@ async function refreshAll() {
   $('updated').textContent = 'Обновлено: ' + now.toLocaleTimeString('ru-RU', { timeZone: TZ });
   btn.disabled = false;
 }
+
+/* ---------- Фотофон: фестиваль «Первозданная Россия» ---------- */
+// Имя файла: «Автор. Название.jpg» — до первой точки автор, после — название фото
+const PHOTOS = [
+  'Алексей Харитонов. Белые Скалы.jpg',
+  'Алексей Харитонов. Кекуры в бухте Золотая.jpg',
+  'Алексей Харитонов. Рыба Стальной реки.jpg',
+  'Алексей Шаскольский. «Надоел ты мне, косолапый».jpg',
+  'Андрей Грачев. Горный хребет Дуссе-Алинь.jpg',
+  'Валерия Зверева. Стрекоза и муравей.jpg',
+  'Виктор Тяхт. Вот я какой.jpg',
+  'Виталий Горшков. Овцебык.jpg',
+  'Владимир Аникеев. Дикий кот .jpg',
+  'Владимир Аникеев. Дикий кот.jpg',
+  'Дмитрий Голубев. Тропики средней полосы.jpg',
+  'Дмитрий Иванов. Золотые леса.jpg',
+  'Евгений Андреев. Кипарисовое озеро.jpg',
+  'Егор Власов. Краснозобая казарка.jpg',
+  'Михаил Каминский. Бонсай над Царским пляжем с видом на мыс Капчик.jpg',
+  'Николай Гернет. Сон Умки.jpg',
+  'Олег Пантелеев. Зубр.jpg',
+  'Олеся Федосеенкова. В цветах Кавказа.jpg',
+  'Ольга Васик. Закат над термокарстовым озером.jpg',
+  'Сергей Карпухин. Хребет Черского.jpg',
+];
+const SLIDE_MS = 60 * 1000;
+
+function parsePhoto(file) {
+  const base = file.replace(/\.[^.]+$/, '');
+  const dot = base.indexOf('.');
+  return {
+    src: 'img/' + encodeURIComponent(file),
+    author: (dot >= 0 ? base.slice(0, dot) : '').trim(),
+    title: (dot >= 0 ? base.slice(dot + 1) : base).trim(),
+  };
+}
+
+const photos = PHOTOS.map(parsePhoto).sort(() => Math.random() - 0.5);
+let photoIdx = -1, front = $('slide-a'), back = $('slide-b');
+
+function preload(src) {
+  return new Promise((ok, fail) => { const i = new Image(); i.onload = ok; i.onerror = fail; i.src = src; });
+}
+
+async function nextPhoto() {
+  for (let tries = 0; tries < photos.length; tries++) {
+    photoIdx = (photoIdx + 1) % photos.length;
+    const p = photos[photoIdx];
+    try { await preload(p.src); } catch { continue; }   // битый файл — пропускаем
+    back.style.backgroundImage = `url("${p.src}")`;
+    back.classList.remove('zoom'); void back.offsetWidth; // перезапуск анимации
+    back.classList.add('zoom', 'show');
+    front.classList.remove('show');
+    [front, back] = [back, front];
+    const cap = $('caption');
+    cap.style.opacity = 0;
+    setTimeout(() => {
+      cap.innerHTML = `<b>${escapeHtml(p.title)}</b>${p.author ? `<span>${escapeHtml(p.author)}</span>` : ''}<small>Фестиваль «Первозданная Россия»</small>`;
+      cap.style.opacity = 1;
+    }, 500);
+    return;
+  }
+}
+
+nextPhoto();
+setInterval(nextPhoto, SLIDE_MS);
 
 $('refresh').addEventListener('click', refreshAll);
 refreshAll();
