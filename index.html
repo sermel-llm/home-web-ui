@@ -55,6 +55,7 @@
   main { padding-bottom: 90px !important; }
   header.card { padding: 12px 20px; }
 
+
   main { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
   header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
   h1 { font-size: 1.3rem; margin: 0; font-weight: 600; }
@@ -100,6 +101,28 @@
     border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; margin-top: 8px;
   }
   .loading { color: var(--muted); }
+  /* Компьютер: всё помещается в один экран, без прокрутки */
+  @media (min-width: 801px) {
+    html, body { height: 100%; overflow: hidden; }
+    main {
+      height: 100vh; display: flex; flex-direction: column;
+      padding: 2vh 16px 0 !important; padding-bottom: 84px !important;
+    }
+    main > header { margin-bottom: 1.6vh; }
+    .time-card { padding: 2.5vh 20px; margin-bottom: 1.6vh; }
+    .clock { font-size: clamp(3rem, 13vh, 8rem); }
+    .date { margin-top: 0.8vh; }
+    .row { margin-bottom: 1.6vh; }
+    .row .card { padding: 1.6vh 20px; }
+    .value { font-size: clamp(1.4rem, 4.2vh, 2.2rem); }
+    .news { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .news h2 { margin-bottom: 1vh; }
+    .news-cols { flex: 1; min-height: 0; }
+    .news-cols > div { min-height: 0; overflow: hidden;
+      -webkit-mask-image: linear-gradient(#000 calc(100% - 24px), transparent);
+              mask-image: linear-gradient(#000 calc(100% - 24px), transparent); }
+    .news li a { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  }
 </style>
 </head>
 <body>
@@ -344,7 +367,6 @@ const PHOTOS = [
   'Валерия Зверева. Стрекоза и муравей.jpg',
   'Виктор Тяхт. Вот я какой.jpg',
   'Виталий Горшков. Овцебык.jpg',
-  'Владимир Аникеев. Дикий кот .jpg',
   'Владимир Аникеев. Дикий кот.jpg',
   'Дмитрий Голубев. Тропики средней полосы.jpg',
   'Дмитрий Иванов. Золотые леса.jpg',
